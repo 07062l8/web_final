@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="eng">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Recipe details — TastyBase</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .main-img {
+            max-width: 100%;
+            height: 400px;
+            object-fit: cover;
+            border-radius: 15px;
+        }
+
+        .comment-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .btn-delete-comment {
+            background: none;
+            border: none;
+            color: #ff4d4d;
+            cursor: pointer;
+            font-size: 0.8em;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <a href="index.html" class="logo">TastyBase 🍳</a>
+        <nav id="nav-links">
+            <a href="index.html">Home</a>
+            <button class="btn-fav" id="favBtn">⭐ Add to favorites</button>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div id="recipe-details" class="details-card">
+            <p>Loading...</p>
+        </div>
+
+        <hr>
+        <section class="comments-section">
+            <h3>Comments 💬</h3>
+
+            <div id="comment-form-container">
+                <textarea id="commentText" placeholder="Write your review..."></textarea>
+                <button onclick="sendComment()" class="btn-add">Send</button>
+            </div>
+
+            <div id="comments-list">
+                <p>Loading comments...</p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        const urlParams = new URLSearchParams(window.location.search);
+        const recipeId = urlParams.get('id');
+
+        const currentUser = JSON.parse(localStorage.getItem('user'));
+
+        async function fetchRecipeDetails() {
+            if (!recipeId) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/recipes/${recipeId}`);
+                const recipe = await response.json();
+
+                const container = document.getElementById('recipe-details');
+                container.innerHTML = `
+                    <div class="details-header">
+                        <img src="${recipe.image || 'https://via.placeholder.com/800x400'}" class="main-img">
+                        <h1>${recipe.title}</h1>
+                        <div class="meta-info">👤 <strong>Author:</strong> ${recipe.user?.username || 'Anonymous'}</div>
+                        <div class="meta" style="margin: 15px 0; color: #666;">
+                            <span>⏱ ${recipe.cookingTime} min</span> | 
+                            <span>📂 ${recipe.category}</span> | 
+                            <span>❤️ ${recipe.likes || 0} likes</span>
+                        </div>
+                    </div>
+                    
+                    <p class="description">${recipe.description || 'Description missing'}</p>
+
+                    <div class="recipe-grid-details">
+                        <div class="ingredients-box">
+                            <h3>Ingredients</h3>
+                            <ul>
+                                ${recipe.ingredients ? recipe.ingredients.map(ing => `<li>${ing}</li>`).join('') : '<li>Not specified</li>'}
+                            </ul>
+                        </div>
+                        
+                        <div class="steps-box">
+                            <h3>Instructions</h3>
+                            <ol>
+                                ${recipe.steps ? recipe.steps.map(step => `<li>${step}</li>`).join('') : '<li>No instructions yet</li>'}
+                            </ol>
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                console.error(err);
+                document.getElementById('recipe-details').innerHTML = '<p>Loading error.</p>';
+            }
+        }
+
+        document.getElementById('favBtn').addEventListener('click', async () => {
+            const token = localStorage.getItem('token');
+            if (!token) return alert('Log in to add to favorites!');
+
+            try {
+                const response = await fetch(`${API_URL}/favorites`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ recipeId: recipeId })
+                });
+
+                if (response.ok) alert('Added to favorites!');
+                else alert('Error (possibly already in favorites)');
+            } catch (err) { console.error(err); }
+        });
+
+        async function fetchComments() {
+            try {
+                const response = await fetch(`${API_URL}/recipes/${recipeId}/comments`);
+                const comments = await response.json();
+                const list = document.getElementById('comments-list');
+
+                if (!comments || comments.length === 0) {
+                    list.innerHTML = '<p>No comments yet.</p>';
+                    return;
+                }
+
+                list.innerHTML = comments.map(c => {
+                    const canDelete = currentUser && (currentUser._id === c.user?._id || currentUser.role === 'admin');
+                    const canEdit = currentUser && (currentUser._id === c.user?._id);
+
+                    return `
+                <div class="comment-item" id="comment-${c._id}"> <div style="display: flex; justify-content: space-between;">
+                        <strong>${c.user?.username || 'Deleted user'}</strong>
+                        <div>
+                            <small>${new Date(c.createdAt).toLocaleDateString()}</small>
+                            
+                            ${canEdit ? `<button onclick="showEditForm('${c._id}', '${c.text}')" class="btn-edit-comment" style="margin-left:10px; cursor:pointer; border:none; background:none; color:blue; font-size:12px;">edit</button>` : ''}
+                            
+                            ${canDelete ? `<button onclick="deleteComment('${c._id}')" class="btn-delete-comment">delete</button>` : ''}
+                        </div>
+                    </div>
+                    <p class="comment-text">${c.text}</p>
+                </div>
+            `;
+                }).join('');
+            } catch (err) { console.error(err); }
+        }
+
+        async function sendComment() {
+            const token = localStorage.getItem('token');
+            const text = document.getElementById('commentText').value.trim();
+
+            if (!token) return alert('Log in to comment');
+            if (!text) return alert('Enter comment text');
+
+            try {
+                const response = await fetch(`${API_URL}/recipes/${recipeId}/comments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ text })
+                });
+
+                if (response.ok) {
+                    document.getElementById('commentText').value = '';
+                    fetchComments();
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function deleteComment(commentId) {
+            if (!confirm('Delete this comment?')) return;
+
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`${API_URL}/recipes/comments/${commentId}`, { 
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    fetchComments(); 
+                } else {
+                    alert('Error while deleting comment');
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        fetchRecipeDetails();
+        fetchComments();
+
+        function showEditForm(id, oldText) {
+            const commentDiv = document.getElementById(`comment-${id}`);
+            commentDiv.innerHTML = `
+        <textarea id="edit-text-${id}" style="width: 100%; min-height: 50px; margin-bottom: 5px; border-radius:5px; padding:5px;">${oldText}</textarea>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="saveEdit('${id}')" style="background:#4CAF50; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Save</button>
+            <button onclick="fetchComments()" style="background:#ccc; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Cancel</button>
+        </div>
+    `;
+        }
+
+        async function saveEdit(id) {
+            const newText = document.getElementById(`edit-text-${id}`).value;
+            const token = localStorage.getItem('token');
+
+            try {
+                const response = await fetch(`${API_URL}/recipes/comments/${id}`, { 
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ text: newText })
+                });
+
+                if (response.ok) {
+                    fetchComments(); 
+                } else {
+                    alert('Error while saving changes');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    </script>
+</body>
+</html>

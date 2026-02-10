@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="eng">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin panel — TastyBase</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="admin-page">
+
+    <header>
+        <a href="index.html" class="logo">TastyBase Admin 🛡️</a>
+        <nav>
+            <a href="index.html">To the website</a>
+            <button class="btn-logout" onclick="logout()">Log out</button>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="admin-header">
+            <h2>Recipe Moderation</h2>
+            <p>Here you can delete any recipe that violates the rules.</p>
+        </div>
+
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Photo</th>
+                    <th>Title</th>
+                    <th>Author (ID)</th>
+                    <th>Created Date</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="admin-recipe-list">
+                </tbody>
+        </table>
+    </main>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user'));
+
+        if (!token || user.role !== 'admin') {
+            alert('Access denied! Only administrators are allowed.');
+            window.location.href = 'index.html';
+        }
+
+        async function fetchAllRecipes() {
+            try {
+                const response = await fetch(`${API_URL}/recipes`);
+                const recipes = await response.json();
+                
+                const tbody = document.getElementById('admin-recipe-list');
+                tbody.innerHTML = recipes.map(r => `
+                    <tr>
+                        <td><img src="${r.image}" width="50" style="border-radius: 5px;"></td>
+                        <td><strong>${r.title}</strong></td>
+                        <td><strong>${r.user.username || 'Anonymous'}</strong> <br> <small>${r.user._id || r.user}</small></td>
+                        <td>${new Date(r.createdAt).toLocaleDateString()}</td>
+                        <td>
+                            <button class="btn-delete-admin" onclick="adminDeleteRecipe('${r._id}')">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function adminDeleteRecipe(id) {
+            if (!confirm('Are you sure you want to delete this recipe as a moderator?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/recipes/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    alert('Recipe successfully deleted by moderator');
+                    fetchAllRecipes();
+                } else {
+                    const data = await response.json();
+                    alert('Error: ' + data.message);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+
+        fetchAllRecipes();
+    </script>
+</body>
+</html>

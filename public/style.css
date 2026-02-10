@@ -1,0 +1,273 @@
+:root {
+    --primary: #ff4f5e;
+    --primary-dark: #e04452;
+    --dark: #2d3436;
+    --grey: #636e72;
+    --light: #f9f9f9;
+    --white: #ffffff;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background-color: var(--light);
+    margin: 0;
+    color: var(--dark);
+    line-height: 1.6;
+}
+
+header {
+    background: var(--white);
+    padding: 15px 5%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--shadow);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--primary);
+    text-decoration: none;
+}
+
+nav a {
+    text-decoration: none;
+    color: var(--dark);
+    margin-left: 20px;
+    font-weight: 500;
+}
+
+.btn-add {
+    background: var(--primary);
+    color: white !important;
+    padding: 8px 18px;
+    border-radius: 20px;
+}
+
+.container {
+    padding: 30px 5%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.recipe-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 25px;
+    margin-top: 20px;
+}
+
+.card {
+    background: var(--white);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-img {
+    height: 180px;
+    background-size: cover;
+    background-position: center;
+}
+
+.card-content {
+    padding: 15px;
+}
+
+.card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+}
+
+button {
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+.btn-auth {
+    background: var(--primary);
+    color: white;
+    padding: 12px;
+    width: 100%;
+}
+
+.like-btn {
+    background: #fff0f1;
+    color: var(--primary);
+    padding: 5px 10px;
+}
+
+.btn-delete {
+    background: #ff7675;
+    color: white;
+    padding: 5px 10px;
+    margin-top: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+}
+
+.auth-card {
+    background: var(--white);
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: var(--shadow);
+    width: 100%;
+    max-width: 400px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+}
+
+input, textarea, select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    margin-top: 20px;
+}
+
+.admin-table th, .admin-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.btn-delete-admin {
+    background: #d63031;
+    color: white;
+    padding: 5px 10px;
+}
+
+.tabs {
+    margin: 20px 0;
+}
+
+.tab-btn {
+    background: #dfe6e9;
+    padding: 10px 20px;
+    margin-right: 10px;
+}
+
+.tab-btn.active {
+    background: var(--primary);
+    color: white;
+}
+
+.comments-section {
+    margin-top: 40px;
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+}
+
+.comment-item {
+    border-bottom: 1px solid #eee;
+    padding: 10px 0;
+}
+
+.comment-item strong {
+    color: var(--primary);
+}
+
+#commentText {
+    margin-bottom: 10px;
+    height: 80px;
+}
+
+.auth-footer {
+    margin-top: 25px;
+    text-align: center;
+    font-size: 0.95rem;
+    color: #666; 
+    line-height: 1.6;
+}
+
+.auth-footer a {
+    color: #ff4d4d;
+    text-decoration: none; 
+    font-weight: 600;
+    transition: all 0.3s ease; 
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+.auth-footer a:hover {
+    color: #e63939;
+    background-color: rgba(255, 77, 77, 0.05);
+    text-decoration: underline;
+}
+
+.back-link {
+    display: inline-block;
+    margin-top: 15px;
+    color: #888 !important;
+    font-weight: 400 !important;
+    font-size: 0.85rem;
+}
+
+.back-link:hover {
+    color: #333 !important;
+    background: none !important;
+}
+
+.btn-edit-gray {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f0f0f0;
+    color: #444; 
+    padding: 5px 10px;
+    margin-top: 10px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border: 2px solid #ddd;
+    flex: 1;
+}
+
+.btn-edit-gray:hover {
+    background-color: #e5e5e5;
+    color: #000;
+    border-color: #ccc;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+

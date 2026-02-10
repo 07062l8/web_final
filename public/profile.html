@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="eng">
+
+<head>
+    <meta charset="UTF-8">
+    <title>My Profile — TastyBase</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header>
+        <a href="index.html" class="logo">TastyBase 🍳</a>
+        <nav id="nav-links">
+            <a href="index.html">Back to home</a>
+            <span id="admin-link-container"></span>
+            <a href="create-recipe.html" class="btn-add">+ New recipe</a>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div class="profile-header">
+            <h2 id="userName">My Profile</h2>
+            <p id="userEmail"></p>
+        </div>
+        <div class="profile-actions">
+            <button class="btn-edit" onclick="toggleEditForm()">✏️ Edit profile settings</button>
+        </div>
+
+        <div id="edit-profile-section"
+            style="display: none; background: #fff; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: var(--shadow);">
+            <h3>Change profile data</h3>
+            <div class="form-group">
+                <label>New username</label>
+                <input type="text" id="newUsername" placeholder="Enter new username">
+            </div>
+            <div class="form-group">
+                <label>New email</label>
+                <input type="email" id="newEmail" placeholder="Enter new email">
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="updateUserProfile()" class="btn-auth"
+                    style="width: auto; padding: 10px 20px;">Save</button>
+                <button onclick="toggleEditForm()" class="btn-delete" style="background: #ccc;">Cancel</button>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('my-recipes')">My recipes</button>
+            <button class="tab-btn" onclick="showTab('fav-recipes')">Favorites</button>
+        </div>
+
+        <section id="my-recipes" class="recipe-grid">
+            <p>No recipes...</p>
+        </section>
+
+        <section id="fav-recipes" class="recipe-grid" style="display: none;">
+            <p>No favorite recipes yet.</p>
+        </section>
+    </main>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user'));
+
+        if (user && user.role === 'admin') {
+            const adminContainer = document.getElementById('admin-link-container');
+            adminContainer.innerHTML = `
+        <a href="admin.html" style="color: #ff4d4d; font-weight: bold; margin-right: 15px;">⚙️ Admin Panel</a>
+    `;
+        }
+
+        if (!token) window.location.href = 'login.html';
+
+        document.getElementById('userName').innerText = user.username || user.name || 'User';
+        document.getElementById('userEmail').innerText = user.email || 'Email not specified';
+
+        function showTab(tabId) {
+            document.querySelectorAll('.recipe-grid').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabId).style.display = 'grid';
+            event.currentTarget.classList.add('active');
+        }
+
+        async function fetchMyRecipes() {
+            try {
+                const response = await fetch(`${API_URL}/recipes`);
+                const recipes = await response.json();
+
+                const container = document.getElementById('my-recipes');
+
+                const myId = user._id || user.id;
+
+                const myOwn = recipes.filter(r => {
+                    const recipeUserId = (typeof r.user === 'object') ? r.user._id : r.user;
+                    return recipeUserId === myId;
+                });
+
+                if (myOwn.length === 0) {
+                    container.innerHTML = '<p>You haven\'t created any recipes yet.</p>';
+                    return;
+                }
+
+                container.innerHTML = myOwn.map(r => `
+    <div class="card">
+        <img src="${r.image}" style="width:100%; height:150px; object-fit:cover;">
+        <div class="card-content">
+            <h3>${r.title}</h3>
+            <div class="card-actions">
+                <a href="edit-recipe.html?id=${r._id}" class="btn-edit-gray">✏️ Edit</a>
+                <button class="btn-delete" onclick="deleteRecipe('${r._id}')">🗑️ Delete</button>
+            </div>
+        </div>
+    </div>
+`).join('');
+            } catch (err) { console.error(err); }
+        }
+
+        async function fetchFavorites() {
+            try {
+                const response = await fetch(`${API_URL}/favorites`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) return;
+
+                const favorites = await response.json();
+                const container = document.getElementById('fav-recipes');
+
+                const validFavorites = favorites.filter(f => f !== null);
+
+                if (validFavorites.length === 0) {
+                    container.innerHTML = '<p style="padding: 20px;">The favorites list is empty.</p>';
+                    return;
+                }
+
+                container.innerHTML = validFavorites.map(f => {
+                    const item = f.recipe ? f.recipe : f;
+
+
+                    return `
+    <div class="card">
+        <img src="${item.image || 'https://via.placeholder.com/300'}" style="width:100%; height:150px; object-fit:cover; border-radius: 8px 8px 0 0;">
+        <div class="card-content">
+            <h3>${item.title || 'Untitled'}</h3>
+            <div class="card-actions">
+                 <a href="recipe-details.html?id=${item._id}" class="btn-edit-gray" style="text-align: center; display: block; text-decoration: none;">👀 View Recipe</a>
+                <button onclick="removeFromFav('${item._id}')" class="btn-delete-fav">💔 Remove</button>
+            </div>
+        </div>
+    </div>
+`;
+                }).join('');
+            } catch (err) {
+                console.error('Error fetching favorites:', err);
+            }
+        }
+
+        async function deleteRecipe(id) {
+            if (!confirm('Are you sure you want to delete this recipe?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/recipes/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    alert('Recipe deleted successfully');
+                    fetchMyRecipes();
+                } else {
+                    alert('Error deleting recipe');
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+
+        fetchMyRecipes();
+        fetchFavorites();
+
+        function toggleEditForm() {
+            const section = document.getElementById('edit-profile-section');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+
+            if (section.style.display === 'block') {
+                document.getElementById('newUsername').value = user.username;
+                document.getElementById('newEmail').value = user.email;
+            }
+        }
+
+        async function updateUserProfile() {
+            const updatedData = {
+                username: document.getElementById('newUsername').value,
+                email: document.getElementById('newEmail').value
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/auth/profile`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(updatedData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('Profile updated successfully!');
+                    const updatedUser = { ...user, ...data };
+                    localStorage.setItem('user', JSON.stringify(updatedUser));
+
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+
+        async function removeFromFav(recipeId) {
+            const token = localStorage.getItem('token');
+
+            try {
+                const res = await fetch(`${API_URL}/favorites/${recipeId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    alert('Deleted from favorites');
+                    await fetchFavorites(); 
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            } catch (err) {
+                console.error("Request error:", err);
+            }
+        }
+    </script>
+</body>
+
+</html>

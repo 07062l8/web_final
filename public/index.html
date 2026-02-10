@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="eng">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TastyBase — Home</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header>
+        <a href="index.html" class="logo">TastyBase 🍳</a>
+
+        <div class="search-container" style="margin: 20px 0; text-align: center;">
+            <input type="text" id="searchInput" placeholder="🔍 Search recipe by name or ingredients..."
+                style="width: 150%; padding: 12px; border-radius: 25px; border: 1px solid #ddd; outline: none;">
+        </div>
+
+        <nav id="nav-links"></nav>
+    </header>
+
+    <main class="container">
+        <aside class="filters">
+            <h3>Filters</h3>
+            <label>Category:</label>
+            <select id="filterCategory" onchange="applyFilters()">
+                <option value="">All</option>
+                <option value="breakfast">Breakfast</option>
+                <option value="lunch">Lunch</option>
+                <option value="dinner">Dinner</option>
+                <option value="dessert">Dessert</option>
+            </select>
+
+            <label>Max time (min):</label>
+            <input type="number" id="filterTime" placeholder="Ex: 30" oninput="applyFilters()">
+        </aside>
+
+        <section class="content">
+            <div id="recipe-list" class="recipe-grid"></div>
+        </section>
+    </main>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        
+        let allRecipes = []; 
+
+        function updateNav() {
+            const nav = document.getElementById('nav-links');
+            const token = localStorage.getItem('token');
+            const user = JSON.parse(localStorage.getItem('user'));
+
+            if (token && user) {
+                nav.innerHTML = `
+                    <a href="profile.html">My Profile</a>
+                    <a href="create-recipe.html" class="btn-add">+ Recipe</a>
+                    <button class="btn-logout" onclick="logout()">Logout</button>
+                `;
+            } else {
+                nav.innerHTML = `
+                    <a href="login.html">Login</a>
+                    <a href="register.html">Register</a>
+                `;
+            }
+        }
+
+        async function fetchRecipes() {
+            try {
+                const response = await fetch(`${API_URL}/recipes`);
+                allRecipes = await response.json(); 
+                displayRecipes(allRecipes); 
+            } catch (err) {
+                console.error('Error loading recipes:', err);
+            }
+        }
+
+        function displayRecipes(recipes) {
+            const list = document.getElementById('recipe-list');
+            
+            if (!recipes || recipes.length === 0) {
+                list.innerHTML = '<p class="empty-msg">No recipes found :(</p>';
+                return;
+            }
+
+            list.innerHTML = recipes.map(recipe => `
+                <div class="card">
+                    <div class="card-img" style="background-image: url('${recipe.image || 'https://via.placeholder.com/300x200?text=No+Image'}')"></div>
+                    <div class="card-content">
+                        <a href="recipe-details.html?id=${recipe._id}" style = "text-decoration: none; color: var(--dark);"><h3>${recipe.title}</h3></a>
+                        <p>${recipe.description ? recipe.description.substring(0, 60) + '...' : ''}</p>
+                        <div class="card-footer">
+                            <span>⏱ ${recipe.cookingTime} min</span>
+                            <button class="like-btn" onclick="likeRecipe('${recipe._id}')">❤️ ${recipe.likes || 0}</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function applyFilters() {
+            const term = document.getElementById('searchInput').value.toLowerCase().trim();
+            const category = document.getElementById('filterCategory').value;
+            const maxTime = document.getElementById('filterTime').value;
+
+            const filtered = allRecipes.filter(recipe => {
+                const nameMatch = recipe.title.toLowerCase().includes(term);
+                const ingMatch = recipe.ingredients ? recipe.ingredients.some(i => i.toLowerCase().includes(term)) : false;
+              
+                const catMatch = category === "" || recipe.category === category;
+                
+                const timeMatch = maxTime === "" || recipe.cookingTime <= parseInt(maxTime);
+
+                return (nameMatch || ingMatch) && catMatch && timeMatch;
+            });
+
+            displayRecipes(filtered);
+        }
+
+        document.getElementById('searchInput').addEventListener('input', applyFilters);
+
+        async function likeRecipe(id) {
+            const token = localStorage.getItem('token');
+            if (!token) return alert('Sign in to like recipes');
+
+            try {
+                const res = await fetch(`${API_URL}/recipes/${id}/like`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    fetchRecipes();
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.reload();
+        }
+
+        updateNav();
+        fetchRecipes();
+    </script>
+</body>
+</html>
